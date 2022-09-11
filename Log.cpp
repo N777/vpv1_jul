@@ -23,10 +23,36 @@ using namespace std;
 
 int nums = 10;
 int counter = 1e4;
+int progression = 1;
+int multi;
+bool fib = true;
 
 unsigned __int64 fibRecursive(unsigned __int64 n) {
     if (n < 2) return n;
     return fibRecursive(n - 1) + fibRecursive(n - 2);
+}
+
+long double A[10000000];
+long double B[10000000];
+long double X[10000000];
+int point;
+double my_func(unsigned __int64 i){
+    if (fib){
+        return fibRecursive(i);
+    }
+    double asd = 0;
+    for (int j = 0; j < progression; ++j) {
+        asd += A[i] * log(cos(X[i] - B[i]));
+    }
+    return asd;
+}
+
+void fillArr(long n) {
+    for (int i = 0; i < n; i++) {
+        A[i] = (rand() % 10000) / (10000 * 1.0);
+        B[i] = (rand() % 10000) / (10000 * 1.0);
+        X[i] = (rand() % 10000) / (10000 * 1.0);
+    }
 }
 
 unsigned long long getFrequency() {
@@ -47,7 +73,7 @@ unsigned long long getFrequency() {
 
 // Длительность одного clock-интервала с помощью QPC
 double сlockIntervalUsingClock() {
-    unsigned __int64 res;
+    double res;
     clock_t t_start, t_finish;
     __int64 t_code;
     clock_t t_clock = clock();
@@ -55,7 +81,7 @@ double сlockIntervalUsingClock() {
     t_start = clock();
     for (int i = 0; i < counter; i++)
     {
-        res = fibRecursive(nums);
+        res = my_func(nums);
     }
     while (clock() < t_clock + 2);
     t_finish = clock();
@@ -66,7 +92,7 @@ double сlockIntervalUsingClock() {
 
 // Длительность одного clock-интервала с помощью QPC
 double сlockIntervalUsingQPC() {
-    unsigned __int64 res;
+    double res;
 	LARGE_INTEGER t_start, t_finish, freq;
 	__int64 t_code;
 	QueryPerformanceFrequency(&freq);
@@ -75,7 +101,7 @@ double сlockIntervalUsingQPC() {
 	QueryPerformanceCounter(&t_start);
     for (int i = 0; i < counter; i++)
     {
-        res = fibRecursive(nums);
+        res = my_func(nums);
     }
 	while (clock() < t_clock + 2);
 	QueryPerformanceCounter(&t_finish);
@@ -85,12 +111,12 @@ double сlockIntervalUsingQPC() {
 
 // Длительность одного сlock-интервала в тактах TSC
 double сlockIntervalUsingTSC() {
-    unsigned __int64 res;
+    double res;
 	__int64 t_start, t_finish;
 	clock_t t_clock = clock();
 	while (clock() < t_clock + 1);
 	t_start = __rdtsc();
-    res = fibRecursive(nums);
+    res = my_func(nums);
 	while (clock() < t_clock + 2);
 	t_finish = __rdtsc();
 	return double(t_finish - t_start) / getFrequency();
@@ -101,15 +127,15 @@ int main() {
 	Log suplog;
 	double scale = MCS_IN_SEC; // масштаб выводимых значений
 	int nPasses = 5;  // число проходов при выполнении серий измерений
+    fillArr(10000);
 	setlocale(LC_CTYPE, "rus");
 	cpuInfo();
-    int point = 3;
-
+    log.config({ {PREC_AVG, 2},
+                 {FILTR_MIN,0},{FILTR_MAX, 0} });
+    point = 5;
     switch (point) {
         case 2:
         {
-            log.config({ {PREC_AVG, 2},
-                         {FILTR_MIN,0},{FILTR_MAX, 0} });
             log.series(true, 1, сlockIntervalUsingClock)
                     .calc().stat(scale, "Число микросекунд в одном clock-интервале через clock (без фильтрации)");
 
@@ -181,7 +207,108 @@ int main() {
                 }
             }
             cout << "TSC = " << min(arr[0], arr[1]) << endl;
+            break;
         }
+        case 4:{
+            fib = false;
+            counter = 1e5;
+            for (int i = 0; i < 10; ++i) {
+                log.series(true, 1000, сlockIntervalUsingClock, nums)
+                        .calc().stat(scale, "Оценка повторяемости 1000 измерений clock - интервала через clock без фильтрации")
+                        .print(O_NATURAL, scale, 10).print(O_MIN, scale, 10).print(O_MAX, scale, 10);
+            }
+            for (int i = 0; i < 10; ++i) {
+                log.series(true, 1000, сlockIntervalUsingQPC, nums)
+                        .calc().stat(scale, "Оценка повторяемости 1000 измерений clock - интервала через QPC без фильтрации")
+                        .print(O_NATURAL, scale, 10).print(O_MIN, scale, 10).print(O_MAX, scale, 10);
+            }
+
+            for (int i = 0; i < 10; ++i) {
+                log.series(true, 1000, сlockIntervalUsingTSC, nums)
+                        .calc().stat(NS_IN_SEC, "Оценка повторяемости 1000 измерений clock - интервала через TSC без фильтрации")
+                        .print(O_NATURAL, scale, 10).print(O_MIN, scale, 10).print(O_MAX, scale, 10);
+            }
+            break;
+        }
+        case 5:{
+            fib = false;
+            vector<double> v;
+            progression = 10;
+            multi = 10;
+            for (int i = 0; i < 1000; ++i) {
+                double res;
+                clock_t t_start, t_finish;
+                __int64 t_code;
+                clock_t t_clock = clock();
+                while (clock() < t_clock + 1);
+                t_start = clock();
+                for (int i = 0; i < counter; i++)
+                {
+                    res = my_func(i);
+                }
+                while (clock() < t_clock + 2);
+                t_finish = clock();
+                t_code = t_finish - t_start;
+                progression += multi;
+                v.push_back(double(t_code) / CLOCKS_PER_SEC);
+            }
+            double k = v[v.size()-1] / 1000;
+            for (int i = 0; i < v.size(); ++i) {
+                v[i] = abs(v[i] - k);
+            }
+            log.set(true, v).calc().stat(scale, "Оценка повторяемости 1000 измерений clock - интервала через clo");
+            cout << "k = " << k * scale;
+
+
+            progression = 10;
+            multi = 10;
+            for (int i = 0; i < 1000; ++i) {
+                double res;
+                LARGE_INTEGER t_start, t_finish, freq;
+                __int64 t_code;
+                QueryPerformanceFrequency(&freq);
+                clock_t t_clock = clock();
+                while (clock() < t_clock + 1);
+                QueryPerformanceCounter(&t_start);
+                for (int i = 0; i < counter; i++)
+                {
+                    res = my_func(i);
+                }
+                while (clock() < t_clock + 2);
+                QueryPerformanceCounter(&t_finish);
+                t_code = t_finish.QuadPart - t_start.QuadPart;
+                progression += multi;
+                v.push_back(double(t_code) / freq.QuadPart);
+            }
+            k = v[v.size()-1] / 1000;
+            for (int i = 0; i < v.size(); ++i) {
+                v[i] = abs(v[i] - k);
+            }
+            log.set(true, v).calc().stat(scale, "Оценка повторяемости 1000 измерений QPC");
+            cout << "k = " << k * scale;
+
+            progression = 10;
+            multi = 10;
+            for (int i = 0; i < 1000; ++i) {
+                double res;
+                __int64 t_start, t_finish;
+                clock_t t_clock = clock();
+                while (clock() < t_clock + 1);
+                t_start = __rdtsc();
+                res = my_func(i);
+                while (clock() < t_clock + 2);
+                t_finish = __rdtsc();
+                progression += multi;
+                v.push_back(double(t_finish - t_start) / getFrequency());
+            }
+            k = v[v.size()-1] / 1000;
+            for (int i = 0; i < v.size(); ++i) {
+                v[i] = abs(v[i] - k);
+            }
+            log.set(true, v).calc().stat(NS_IN_SEC, "Оценка повторяемости 1000 измерений TSC");
+            cout << "k = " << k * NS_IN_SEC;
+        }
+
     }
 
 	return 0;

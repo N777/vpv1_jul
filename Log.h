@@ -89,8 +89,19 @@ public:
 		}
 		return *this;
 	}
+    Log& series(bool clear, int count, double (meter)(), int &nums) {
+        if (clear) arr.clear();
+        for (int n = 0; n < count; n++) {
+            nums = n;
+            arr.push_back(meter());
+        }
+        return *this;
+    }
+
+
 	// Добавление группы результатов измерения
-	Log& set(vector <double> source) {
+	Log& set(bool clear, vector <double> source) {
+        if (clear) arr.clear();
 		for (double v : source)
 			arr.push_back(v);
 		return *this;
