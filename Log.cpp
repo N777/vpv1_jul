@@ -103,7 +103,7 @@ int main() {
 	int nPasses = 5;  // число проходов при выполнении серий измерений
 	setlocale(LC_CTYPE, "rus");
 	cpuInfo();
-    int point = 2;
+    int point = 3;
 
     switch (point) {
         case 2:
@@ -122,6 +122,65 @@ int main() {
             log.series(true, 1000, сlockIntervalUsingTSC)
                     .calc().stat(NS_IN_SEC, "Оценка повторяемости 1000 измерений clock - интервала через TSC без фильтрации");
             break;
+        }
+        case 3:{
+            int max_sum = 0;
+            double arr[2] = { 0,0 };
+            while (arr[0] == 0 || arr[1] == 0) {
+                int sum = 0;
+                max_sum += 10;
+                for (int i = 0; i < 2; i++)
+                {
+                    clock_t start = clock();
+                    for (int i = 0; i < max_sum; i++)
+                    {
+                        sum += 1;
+                    }
+                    clock_t end = clock();
+                    arr[i] = double(end - start) / CLOCKS_PER_SEC;
+                }
+            }
+            cout << "clock = " << min(arr[0], arr[1]) << endl;
+
+            max_sum = 0;
+            arr[0] = 0;
+            arr[1] = 0;
+            while (arr[0] == 0 || arr[1] == 0) {
+                LARGE_INTEGER t_start, t_finish, freq;
+                int sum = 0;
+                max_sum += 1;
+                for (int i = 0; i < 2; i++)
+                {
+                    __int64 t_code;
+                    QueryPerformanceFrequency(&freq);
+                    QueryPerformanceCounter(&t_start);
+                    for (int i = 0; i < max_sum; i++)
+                    {
+                        sum += 1;
+                    }
+                    QueryPerformanceCounter(&t_finish);
+                    t_code = t_finish.QuadPart - t_start.QuadPart;
+                    arr[i] = double(t_code) / freq.QuadPart;
+                }
+            }
+            cout << "QPC = " << min(arr[0], arr[1]) << endl;
+
+            max_sum = 0;
+            arr[0] = 0;
+            arr[1] = 0;
+            while (arr[0] == 0 || arr[1] == 0) {
+                LARGE_INTEGER t_start, t_finish, freq;
+                int sum = 0;
+                max_sum += 1;
+                for (int i = 0; i < 2; i++)
+                {
+                    __int64 t_start, t_finish;
+                    t_start = __rdtsc();
+                    t_finish = __rdtsc();
+                    arr[i] = double(t_finish - t_start) / getFrequency();
+                }
+            }
+            cout << "TSC = " << min(arr[0], arr[1]) << endl;
         }
     }
 
