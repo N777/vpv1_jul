@@ -231,6 +231,7 @@ int main() {
             break;
         }
         case 5:{
+            counter = 1e2;
             fib = false;
             vector<double> v;
             progression = 10;
@@ -257,7 +258,7 @@ int main() {
                 v[i] = abs(v[i] - k);
             }
             log.set(true, v).calc().stat(scale, "Оценка повторяемости 1000 измерений clock - интервала через clo");
-            cout << "k = " << k * scale;
+            cout << "k = " << k * scale << endl;
 
 
             progression = 10;
@@ -285,7 +286,7 @@ int main() {
                 v[i] = abs(v[i] - k);
             }
             log.set(true, v).calc().stat(scale, "Оценка повторяемости 1000 измерений QPC");
-            cout << "k = " << k * scale;
+            cout << "k = " << k * scale << endl;
 
             progression = 10;
             multi = 10;
