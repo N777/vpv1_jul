@@ -14,36 +14,36 @@
 
 using namespace std;
 
-// Код упорядочевания: естественный, вначале минимальные, вначале максимальные
+// РљРѕРґ СѓРїРѕСЂСЏРґРѕС‡РµРІР°РЅРёСЏ: РµСЃС‚РµСЃС‚РІРµРЅРЅС‹Р№, РІРЅР°С‡Р°Р»Рµ РјРёРЅРёРјР°Р»СЊРЅС‹Рµ, РІРЅР°С‡Р°Р»Рµ РјР°РєСЃРёРјР°Р»СЊРЅС‹Рµ
 enum { O_NATURAL, O_MIN, O_MAX };
-/* Параметры конфигурирования формата распечатки и фильтрации
-   PREC_VAL - число знаков после запятой в распечатки сохраняемых в протоколе значений
-   PREC_AVG - число знаков после запятой в распечатке
-   FILTR_MIN, FILTR_MAX - число отбрасываемых наименьших и наибольших перед подсчетом среднего и СКО
+/* РџР°СЂР°РјРµС‚СЂС‹ РєРѕРЅС„РёРіСѓСЂРёСЂРѕРІР°РЅРёСЏ С„РѕСЂРјР°С‚Р° СЂР°СЃРїРµС‡Р°С‚РєРё Рё С„РёР»СЊС‚СЂР°С†РёРё
+   PREC_VAL - С‡РёСЃР»Рѕ Р·РЅР°РєРѕРІ РїРѕСЃР»Рµ Р·Р°РїСЏС‚РѕР№ РІ СЂР°СЃРїРµС‡Р°С‚РєРё СЃРѕС…СЂР°РЅСЏРµРјС‹С… РІ РїСЂРѕС‚РѕРєРѕР»Рµ Р·РЅР°С‡РµРЅРёР№
+   PREC_AVG - С‡РёСЃР»Рѕ Р·РЅР°РєРѕРІ РїРѕСЃР»Рµ Р·Р°РїСЏС‚РѕР№ РІ СЂР°СЃРїРµС‡Р°С‚РєРµ
+   FILTR_MIN, FILTR_MAX - С‡РёСЃР»Рѕ РѕС‚Р±СЂР°СЃС‹РІР°РµРјС‹С… РЅР°РёРјРµРЅСЊС€РёС… Рё РЅР°РёР±РѕР»СЊС€РёС… РїРµСЂРµРґ РїРѕРґСЃС‡РµС‚РѕРј СЃСЂРµРґРЅРµРіРѕ Рё РЎРљРћ
 */
 enum Config { CONFIG_FIRST = 0, PREC_VAL = 0, PREC_AVG, FILTR_MIN, FILTR_MAX, CONFIG_SIZE };
 
-// Получение информации о процессоре через команду функцию __cpuid(unsigned *) info, funcCode),
-// которая выполняет машинную  команду CPUID, предварительно загружая в EAX код функции funcCode. 
-// CPUID возвращает 4 четырехбайтных кода: 0:EAX, 1:EBX, 2:ECX, 3:EDX, 
-// а функция __cpuid перемещает эти слова по адресу info
+// РџРѕР»СѓС‡РµРЅРёРµ РёРЅС„РѕСЂРјР°С†РёРё Рѕ РїСЂРѕС†РµСЃСЃРѕСЂРµ С‡РµСЂРµР· РєРѕРјР°РЅРґСѓ С„СѓРЅРєС†РёСЋ __cpuid(unsigned *) info, funcCode),
+// РєРѕС‚РѕСЂР°СЏ РІС‹РїРѕР»РЅСЏРµС‚ РјР°С€РёРЅРЅСѓСЋ  РєРѕРјР°РЅРґСѓ CPUID, РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅРѕ Р·Р°РіСЂСѓР¶Р°СЏ РІ EAX РєРѕРґ С„СѓРЅРєС†РёРё funcCode. 
+// CPUID РІРѕР·РІСЂР°С‰Р°РµС‚ 4 С‡РµС‚С‹СЂРµС…Р±Р°Р№С‚РЅС‹С… РєРѕРґР°: 0:EAX, 1:EBX, 2:ECX, 3:EDX, 
+// Р° С„СѓРЅРєС†РёСЏ __cpuid РїРµСЂРµРјРµС‰Р°РµС‚ СЌС‚Рё СЃР»РѕРІР° РїРѕ Р°РґСЂРµСЃСѓ info
 void cpuInfo() {
 	// int regs[4]; // 0:EAX, 1:EBX, 2:ECX, 3:EDX 
-	char nameCPU[80]; // имя процессора
-	// Получение имени процессора
-	// Коды 0x80000002..0x80000004 позволяют получить полное имя CPU по 16 байтов
+	char nameCPU[80]; // РёРјСЏ РїСЂРѕС†РµСЃСЃРѕСЂР°
+	// РџРѕР»СѓС‡РµРЅРёРµ РёРјРµРЅРё РїСЂРѕС†РµСЃСЃРѕСЂР°
+	// РљРѕРґС‹ 0x80000002..0x80000004 РїРѕР·РІРѕР»СЏСЋС‚ РїРѕР»СѓС‡РёС‚СЊ РїРѕР»РЅРѕРµ РёРјСЏ CPU РїРѕ 16 Р±Р°Р№С‚РѕРІ
 	__cpuid((int*)nameCPU, 0x80000002);
 	__cpuid((int*)nameCPU + 4, 0x80000003);
 	__cpuid((int*)nameCPU + 8, 0x80000004);
 	int cores = thread::hardware_concurrency();
 
-	cout << endl << nameCPU << "\tПотоков: " << cores << endl << endl;
+	cout << endl << nameCPU << "\tРџРѕС‚РѕРєРѕРІ: " << cores << endl << endl;
 }
-// Класс протоколирования, обработки, вывода, организации серий измерений
+// РљР»Р°СЃСЃ РїСЂРѕС‚РѕРєРѕР»РёСЂРѕРІР°РЅРёСЏ, РѕР±СЂР°Р±РѕС‚РєРё, РІС‹РІРѕРґР°, РѕСЂРіР°РЅРёР·Р°С†РёРё СЃРµСЂРёР№ РёР·РјРµСЂРµРЅРёР№
 class Log {
 public:
-	double dmin = 1.0E10, dmax = 0.; // минимальный и максимальный элемент
-	double avg = 0., sqdev = 0., sqdev_perc = 0; // среднее, СКО, СКО%
+	double dmin = 1.0E10, dmax = 0.; // РјРёРЅРёРјР°Р»СЊРЅС‹Р№ Рё РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЌР»РµРјРµРЅС‚
+	double avg = 0., sqdev = 0., sqdev_perc = 0; // СЃСЂРµРґРЅРµРµ, РЎРљРћ, РЎРљРћ%
 	vector <double> arr;
 	int conf[CONFIG_SIZE] = { 0, 0, 0, 0 };
 	ostringstream msgfiltr;
@@ -54,13 +54,13 @@ public:
 		if (conf[FILTR_MIN] > 0) {
 			sort(vect.begin(), vect.end());
 			vect.erase(vect.begin(), vect.begin() + conf[FILTR_MIN]);
-			msgfiltr << "\nУдалено " << conf[FILTR_MIN] << " наименьших";
+			msgfiltr << "\nРЈРґР°Р»РµРЅРѕ " << conf[FILTR_MIN] << " РЅР°РёРјРµРЅСЊС€РёС…";
 		}
 		if (conf[FILTR_MAX] > 0) {
 			sort(vect.begin(), vect.end(), [](double a, double b) {
 				return a > b; });
 			vect.erase(vect.begin(), vect.begin() + conf[FILTR_MAX]);
-			msgfiltr << "  Удалено " << conf[FILTR_MAX] << " наибольших";
+			msgfiltr << "  РЈРґР°Р»РµРЅРѕ " << conf[FILTR_MAX] << " РЅР°РёР±РѕР»СЊС€РёС…";
 		}
 		avg = accumulate(vect.begin(), vect.end(), 0.0, [&](double x, double y) {return x + y / vect.size(); });
 		sqdev = sqrt(accumulate(vect.begin(), vect.end(), 0.,
@@ -80,8 +80,8 @@ public:
 		}
 		return *this;
 	}
-	// Серия измерений, каждое из которых выполняется функцией meter, 
-	// возвращающей время в секундах  
+	// РЎРµСЂРёСЏ РёР·РјРµСЂРµРЅРёР№, РєР°Р¶РґРѕРµ РёР· РєРѕС‚РѕСЂС‹С… РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ С„СѓРЅРєС†РёРµР№ meter, 
+	// РІРѕР·РІСЂР°С‰Р°СЋС‰РµР№ РІСЂРµРјСЏ РІ СЃРµРєСѓРЅРґР°С…  
 	Log& series(bool clear, int count, double (meter)()) {
 		if (clear) arr.clear();
 		for (int n = 0; n < count; n++) {
@@ -99,44 +99,44 @@ public:
     }
 
 
-	// Добавление группы результатов измерения
+	// Р”РѕР±Р°РІР»РµРЅРёРµ РіСЂСѓРїРїС‹ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РёР·РјРµСЂРµРЅРёСЏ
 	Log& set(bool clear, vector <double> source) {
         if (clear) arr.clear();
 		for (double v : source)
 			arr.push_back(v);
 		return *this;
 	}
-	// Описательная статистика результатов измерений
+	// РћРїРёСЃР°С‚РµР»СЊРЅР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР° СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РёР·РјРµСЂРµРЅРёР№
 	Log& stat(double scale, string unit) {
 		if (dmin > dmax&& arr.size() > 0) {
-			cout << "\nПопытка вывести статистику без выполнения calc()" << endl;
+			cout << "\nРџРѕРїС‹С‚РєР° РІС‹РІРµСЃС‚Рё СЃС‚Р°С‚РёСЃС‚РёРєСѓ Р±РµР· РІС‹РїРѕР»РЅРµРЅРёСЏ calc()" << endl;
 		}
 		cout.setf(ios::fixed);
-		cout << "Статистика " << arr.size() << " измерений(" << unit << ")" << endl << msgfiltr.str() << endl
-			<< setprecision(conf[PREC_VAL]) << "Минимум: " << scale * dmin << "  Максимум: " << scale * dmax
-			<< setprecision(conf[PREC_AVG]) << "  Среднее: " << scale * avg
-			<< "  СКО: " << scale * sqdev << "  СКО%: " << sqdev_perc << endl;
+		cout << "РЎС‚Р°С‚РёСЃС‚РёРєР° " << arr.size() << " РёР·РјРµСЂРµРЅРёР№(" << unit << ")" << endl << msgfiltr.str() << endl
+			<< setprecision(conf[PREC_VAL]) << "РњРёРЅРёРјСѓРј: " << scale * dmin << "  РњР°РєСЃРёРјСѓРј: " << scale * dmax
+			<< setprecision(conf[PREC_AVG]) << "  РЎСЂРµРґРЅРµРµ: " << scale * avg
+			<< "  РЎРљРћ: " << scale * sqdev << "  РЎРљРћ%: " << sqdev_perc << endl;
 		return *this;
 	}
-	// целочисленный вывод с масштабом scale первых len в одном из трех порадков:
-	// O_NORM - естественный, O_MIN - минимальные, O_MAX - максимальные
+	// С†РµР»РѕС‡РёСЃР»РµРЅРЅС‹Р№ РІС‹РІРѕРґ СЃ РјР°СЃС€С‚Р°Р±РѕРј scale РїРµСЂРІС‹С… len РІ РѕРґРЅРѕРј РёР· С‚СЂРµС… РїРѕСЂР°РґРєРѕРІ:
+	// O_NORM - РµСЃС‚РµСЃС‚РІРµРЅРЅС‹Р№, O_MIN - РјРёРЅРёРјР°Р»СЊРЅС‹Рµ, O_MAX - РјР°РєСЃРёРјР°Р»СЊРЅС‹Рµ
 	Log& print(int ord, double scale, unsigned len) {
 		vector <double> vect = arr;
 		string head, suffix = "";
 		if (conf[FILTR_MIN] + conf[FILTR_MAX] > 0)
-			suffix = " до фильтрации";
+			suffix = " РґРѕ С„РёР»СЊС‚СЂР°С†РёРё";
 		int nsetw = int(ceil(log10(dmax * scale))) + conf[PREC_VAL] + 3;
 		switch (ord) {
 		case O_NATURAL:
-			head = "Первые значения" + suffix + ": ";
+			head = "РџРµСЂРІС‹Рµ Р·РЅР°С‡РµРЅРёСЏ" + suffix + ": ";
 			break;
 		case O_MIN:
 			sort(vect.begin(), vect.end());
-			head = "Наименьшие" + suffix + ": ";
+			head = "РќР°РёРјРµРЅСЊС€РёРµ" + suffix + ": ";
 			break;
 		case O_MAX:
 			sort(vect.begin(), vect.end(), [](double a, double b) { return a > b; });
-			head = "Наибольшие" + suffix + ": ";
+			head = "РќР°РёР±РѕР»СЊС€РёРµ" + suffix + ": ";
 			break;
 		}
 		cout.setf(ios::fixed);
